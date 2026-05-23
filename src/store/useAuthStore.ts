@@ -1,0 +1,18 @@
+import { create } from 'zustand';
+import { Profile } from '@/types';
+
+interface AuthState {
+  profile: Profile | null;
+  isLoading: boolean;
+  setProfile: (profile: Profile | null) => void;
+  setLoading: (loading: boolean) => void;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  profile: null,
+  isLoading: true,
+  setProfile: (profile) => set({ profile, isLoading: false }),
+  setLoading: (loading) => set({ isLoading: loading }),
+  logout: () => set({ profile: null, isLoading: false }),
+}));

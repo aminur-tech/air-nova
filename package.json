@@ -9,14 +9,24 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@hookform/resolvers": "~5.4.0",
+    "@radix-ui/react-slot": "~1.2.4",
+    "@supabase/ssr": "~0.10.3",
     "@supabase/supabase-js": "~2.106.1",
     "axios": "~1.16.1",
+    "clsx": "~2.1.1",
+    "framer-motion": "~12.40.0",
     "install": "~0.13.0",
     "lucide-react": "~1.16.0",
     "next": "16.2.6",
+    "next-themes": "~0.4.6",
     "npm": "~11.15.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-hook-form": "~7.76.1",
+    "react-hot-toast": "~2.6.0",
+    "tailwind-merge": "~3.6.0",
+    "zod": "~4.4.3",
     "zustand": "~5.0.13"
   },
   "devDependencies": {
