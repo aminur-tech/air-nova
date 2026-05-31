@@ -31,14 +31,7 @@ export const BookingService = {
     const { data, error } = await supabase
       .from('bookings')
       .select(`
-        *,
-        flight:flights(
-          *,
-          airline:airlines(*),
-          origin:airports!origin_airport_id(*),
-          destination:airports!destination_airport_id(*)
-        )
-      `);
+        *`);
     if (error) throw error;
     return data;
   }
