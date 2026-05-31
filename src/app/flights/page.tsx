@@ -1,14 +1,14 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { FlightService } from '@/services/flight';
 import { Flight } from '@/types';
 import SearchForm from '@/components/flight/search-form';
 import FlightCard from '@/components/flight/flight-card';
 import { SlidersHorizontal } from 'lucide-react';
 
-export default function FlightsSearchPage() {
+function FlightsSearchContent() {
   const searchParams = useSearchParams();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,5 +82,13 @@ export default function FlightsSearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function FlightsSearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-400">Loading flight search...</div>}>
+      <FlightsSearchContent />
+    </Suspense>
   );
 }

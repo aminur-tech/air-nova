@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { AuthService } from '@/services/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -31,17 +32,27 @@ export default function LoginPage() {
     setLoading(true);
     setAuthError(null);
     
-    const { error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password
+      });
 
-    if (error) {
-      setAuthError(error.message);
-      setLoading(false);
-    } else {
+      if (error) {
+        setAuthError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      // Wait for auth state to sync before navigating
+      await AuthService.syncSession();
+
+      // Navigate after sync is complete
       router.push('/');
       router.refresh();
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'An error occurred');
+      setLoading(false);
     }
   };
 

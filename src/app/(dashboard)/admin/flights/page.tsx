@@ -8,15 +8,18 @@ import { FlightService } from '@/services/flight';
 import { Flight } from '@/types';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/utils/helpers';
-import { FlightFormData } from '@/schemas/admin';
-import { AdminFlightForm } from '@/components/admin/AdminFlightForm';
+import { AdminFlightForm, AdminFlightFormData, Airline, Airport } from '@/components/admin/AdminFlightForm';
+
 
 export default function AdminFlightsPage() {
-  const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [flights, setFlights] = useState<Flight[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
+  const [airports, setAirports] = useState<Airport[]>([]);
+  const [airlines, setAirlines] = useState<Airline[]>([]);
+
 
   useEffect(() => {
     loadFlights();
@@ -25,9 +28,12 @@ export default function AdminFlightsPage() {
   async function loadFlights() {
     setLoading(true);
     try {
-      // Reusing search without strict params to poll global data records
-      const data = await FlightService.searchFlights({});
-      setFlights(data);
+      const flightsData = await FlightService.getFlight();
+      setFlights(flightsData || []);
+      const airportsData = await FlightService.getAirports();
+      const airlinesData = await FlightService.getAirlines();
+      setAirports(airportsData || []);
+      setAirlines(airlinesData || []);
     } catch (err) {
       console.error('Failed to resolve system flights matrix:', err);
     } finally {
@@ -35,36 +41,37 @@ export default function AdminFlightsPage() {
     }
   }
 
-  const handleFormSubmit = async (data: FlightFormData) => {
+  // ইনপুট ফিল্ড থেকে আসা এয়ারলাইন এবং এয়ারপোর্ট এর নাম সরাসরি Supabase রাইট পাইপলাইনে পাঠানো হচ্ছে
+  const handleFormSubmit = async (formData: AdminFlightFormData) => {
     try {
       if (editingFlight) {
-        // Handle explicit update call to DB via FlightService here
-        console.log('Updating schedule instance:', editingFlight.id, data);
+        console.log('Updating schedule instance:', editingFlight.id, formData);
       } else {
         await FlightService.createFlight({
-          flight_number: data.flightNumber,
-          departure_time: new Date(data.departureTime).toISOString(),
-          arrival_time: new Date(data.arrivalTime).toISOString(),
-          price: data.price,
-          total_seats: data.totalSeats,
-          available_seats: data.totalSeats,
-          class_type: 'economy', // default or extended from panel schema
+          flight_number: formData.flightNumber,
+          departure_time: new Date(formData.departureTime).toISOString(),
+          arrival_time: new Date(formData.arrivalTime).toISOString(),
+          price: formData.price,
+          total_seats: formData.totalSeats,
+          available_seats: formData.totalSeats,
+          class_type: 'economy',
           baggage_allowance: '23kg',
           status: 'scheduled',
-          airline_id: 'd3b07384-d113-4ec5-a587-434343434343', // Example static seed reference
-          origin_airport_id: 'a1b07384-d113-4ec5-a587-111111111111',
-          destination_airport_id: 'b2b07384-d113-4ec5-a587-222222222222'
+          airline_name: formData.airlineName,
+          origin_airport_name: formData.originAirportName,
+          destination_airport_name: formData.destinationAirportName
         });
       }
       setIsModalOpen(false);
       setEditingFlight(null);
       loadFlights();
     } catch (err) {
+      console.error(err);
       alert('Operational write pipeline exception occurred.');
     }
   };
 
-  const filteredFlights = flights.filter(f => 
+  const filteredFlights = flights.filter(f =>
     f.flight_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
     f.origin?.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
     f.destination?.city.toLowerCase().includes(searchQuery.toLowerCase())
@@ -77,7 +84,7 @@ export default function AdminFlightsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-white">Flight Deployments</h1>
           <p className="text-slate-400 text-sm">Schedule, modify, and monitor active commercial aircraft lines.</p>
         </div>
-        <Button 
+        <Button
           onClick={() => { setEditingFlight(null); setIsModalOpen(true); }}
           className="flex items-center gap-2"
         >
@@ -85,10 +92,10 @@ export default function AdminFlightsPage() {
         </Button>
       </div>
 
-      {/* Control Utility Bar */}
+      {/* সার্চ ফিল্টার */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
-        <input 
+        <input
           type="text"
           placeholder="Filter by flight tag, origin, or landing destination..."
           value={searchQuery}
@@ -97,7 +104,7 @@ export default function AdminFlightsPage() {
         />
       </div>
 
-      {/* Main Flights Grid Output Ledger */}
+      {/* টেবিল লিস্ট */}
       {loading ? (
         <div className="h-48 bg-slate-900/40 rounded-2xl animate-pulse border border-white/5" />
       ) : (
@@ -143,7 +150,7 @@ export default function AdminFlightsPage() {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button 
+                        <button
                           onClick={() => {
                             setEditingFlight(flight);
                             setIsModalOpen(true);
@@ -165,26 +172,29 @@ export default function AdminFlightsPage() {
         </div>
       )}
 
-      {/* Slide-over Action Overlay Overlay Management Panel */}
+      {/* পপআপ মডাল ফর্ম */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               className="relative w-full max-w-2xl bg-slate-950 rounded-2xl border border-slate-800 p-2 shadow-2xl overflow-y-auto max-h-[90vh]"
             >
               <div className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer" onClick={() => setIsModalOpen(false)}>✕</div>
-              <AdminFlightForm 
+
+              <AdminFlightForm
+                airports={airports}
+                airlines={airlines}
                 onSubmit={handleFormSubmit}
                 initialData={editingFlight ? {
                   flightNumber: editingFlight.flight_number,
-                  airline: editingFlight.airline?.name || '',
-                  departureAirport: editingFlight.origin?.code || '',
-                  arrivalAirport: editingFlight.destination?.code || '',
-                  departureTime: editingFlight.departure_time.slice(0,16),
-                  arrivalTime: editingFlight.arrival_time.slice(0,16),
+                  airlineName: editingFlight.airline?.name || '',
+                  originAirportName: editingFlight.origin?.name || '',
+                  destinationAirportName: editingFlight.destination?.name || '',
+                  departureTime: editingFlight.departure_time.slice(0, 16),
+                  arrivalTime: editingFlight.arrival_time.slice(0, 16),
                   price: editingFlight.price,
                   totalSeats: editingFlight.total_seats,
                 } : undefined}

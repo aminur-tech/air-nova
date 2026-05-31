@@ -3,23 +3,41 @@
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AuthService } from '@/services/auth';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export function useAuth() {
-  useEffect(() => {
-    // Perform initial session checks
-    AuthService.syncSession();
+  const { isHydrated, setHydrated, setLoading } = useAuthStore();
 
-    // Setup an active listener to stream auth updates instantly across layouts
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        setLoading(true);
+        
+        // Initial session check - this will populate from localStorage if available
         await AuthService.syncSession();
-      } else {
-        AuthService.syncSession();
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        setLoading(false);
+        setHydrated(true);
       }
-    });
+    };
+
+    // Only initialize once after hydration
+    if (!isHydrated) {
+      initializeAuth();
+    }
+
+    // Setup active listener for real-time auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        // Sync profile whenever auth state changes
+        await AuthService.syncSession();
+      }
+    );
 
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
-  }, []);
+  }, [isHydrated, setHydrated, setLoading]);
 }

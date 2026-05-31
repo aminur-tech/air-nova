@@ -1,6 +1,8 @@
 import '@/app/globals.css';
 import Navbar from '@/components/common/navbar';
 import Footer from '@/components/common/footer';
+import { AuthProvider } from '@/providers/auth-provider';
+import { ToastProvider } from '@/providers/toast-provider';
 
 export const metadata = {
   title: 'AeroSky - Premium Flight Management',
@@ -9,13 +11,17 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-slate-950 text-white antialiased selection:bg-blue-500/30">
-        <div className="relative min-h-screen flex flex-col">
-          <Navbar />
-          <main className="flex-grow">{children}</main>
-          <Footer />
-        </div>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className="bg-slate-950 text-white antialiased selection:bg-blue-500/30" suppressHydrationWarning>
+        <AuthProvider>
+          <ToastProvider>
+            <div className="relative min-h-screen flex flex-col">
+              <Navbar />
+              <main className="flex-grow">{children}</main>
+              <Footer />
+            </div>
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );
