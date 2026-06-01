@@ -1,4 +1,3 @@
-import { bookingStatusSchema } from "@/schemas/admin";
 
 export type UserRole = 'passenger' | 'admin';
 export type FlightStatus = 'scheduled' | 'delayed' | 'departed' | 'arrived' | 'cancelled';
@@ -57,3 +56,4 @@ export interface Booking {
   status: BookingStatus;
   created_at: string;
 }
+

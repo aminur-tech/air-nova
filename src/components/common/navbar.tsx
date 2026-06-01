@@ -97,9 +97,13 @@ export default function Navbar() {
               className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all text-sm font-medium text-slate-200"
             >
 
-              {/* AVATAR */}
-              <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-sm font-bold text-blue-400 uppercase">
-                {profile.full_name?.charAt(0)}
+              {/* AVATAR CONDITIONAL RENDER */}
+              <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-sm font-bold text-blue-400 uppercase overflow-hidden">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  profile.full_name?.charAt(0)
+                )}
               </div>
 
               {/* NAME */}
@@ -137,8 +141,13 @@ export default function Navbar() {
                   <div className="px-3 py-3 border-b border-white/5 mb-2">
                     <div className="flex items-center gap-3">
 
-                      <div className="h-10 w-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-sm font-bold text-blue-400 uppercase">
-                        {profile.full_name?.charAt(0)}
+                      {/* DROPDOWN AVATAR CONDITIONAL RENDER */}
+                      <div className="h-10 w-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-sm font-bold text-blue-400 uppercase overflow-hidden">
+                        {profile.avatar_url ? (
+                          <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                        ) : (
+                          profile.full_name?.charAt(0)
+                        )}
                       </div>
 
                       <div className="overflow-hidden">
@@ -165,7 +174,7 @@ export default function Navbar() {
 
                   {/* PROFILE */}
                   <Link
-                    href="/passenger/profile"
+                    href="/profile"
                     onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
                   >
@@ -272,8 +281,13 @@ export default function Navbar() {
                 {/* PROFILE CARD */}
                 <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5">
 
-                  <div className="h-12 w-12 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-lg font-bold text-blue-400 uppercase">
-                    {profile.full_name?.charAt(0)}
+                  {/* MOBILE MENU AVATAR CONDITIONAL RENDER */}
+                  <div className="h-12 w-12 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-lg font-bold text-blue-400 uppercase overflow-hidden">
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      profile.full_name?.charAt(0)
+                    )}
                   </div>
 
                   <div className="overflow-hidden">

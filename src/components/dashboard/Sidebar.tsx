@@ -38,8 +38,8 @@ export default function DashboardSidebar({ role }: SidebarProps) {
       ]
     : [
         { href: '/passenger', label: 'My Bookings', icon: Ticket },
-        { href: '/passenger/profile', label: 'Profile Details', icon: User },
-        { href: '/passenger/settings', label: 'Account Settings', icon: Settings },
+        { href: '/profile', label: 'Profile Details', icon: User },
+        { href: '/settings', label: 'Account Settings', icon: Settings },
       ];
 
   return (

@@ -51,6 +51,30 @@ export const AuthService = {
     }
   },
 
+  // Add this method inside your AuthService object
+async updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile | null> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating profile:', error);
+      return null;
+    }
+
+    // Instantly sync changes to your Zustand local storage store
+    useAuthStore.getState().setProfile(data as Profile);
+    return data as Profile;
+  } catch (error) {
+    console.error('Profile update exception:', error);
+    return null;
+  }
+},
+
   async logout() {
     try {
       await supabase.auth.signOut();
