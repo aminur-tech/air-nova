@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Calendar, Plane, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, Plane, Search, Loader2 } from 'lucide-react';
 import { FlightService } from '@/services/flight';
 
 import { Flight } from '@/types';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/utils/helpers';
 import { AdminFlightForm, AdminFlightFormData, Airline, Airport } from '@/components/admin/AdminFlightForm';
-
 
 export default function AdminFlightsPage() {
   const [loading, setLoading] = useState(true);
@@ -19,7 +18,7 @@ export default function AdminFlightsPage() {
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [airports, setAirports] = useState<Airport[]>([]);
   const [airlines, setAirlines] = useState<Airline[]>([]);
-
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadFlights();
@@ -41,40 +40,66 @@ export default function AdminFlightsPage() {
     }
   }
 
-  // ইনপুট ফিল্ড থেকে আসা এয়ারলাইন এবং এয়ারপোর্ট এর নাম সরাসরি Supabase রাইট পাইপলাইনে পাঠানো হচ্ছে
+  // DYNAMIC FORM TRANSACTION ROUTER (CREATE VS UPDATE)
   const handleFormSubmit = async (formData: AdminFlightFormData) => {
     try {
+      const parsedPayload = {
+        flight_number: formData.flightNumber,
+        departure_time: new Date(formData.departureTime).toISOString(),
+        arrival_time: new Date(formData.arrivalTime).toISOString(),
+        price: Number(formData.price),
+        total_seats: Number(formData.totalSeats),
+        airline_name: formData.airlineName,
+        origin_airport_name: formData.originAirportName,
+        destination_airport_name: formData.destinationAirportName
+      };
+
       if (editingFlight) {
-        console.log('Updating schedule instance:', editingFlight.id, formData);
+        // Run Dynamic Database Patch Update
+        await FlightService.updateFlight(editingFlight.id, parsedPayload);
       } else {
+        // Run Structural Database Creation Record Insert
         await FlightService.createFlight({
-          flight_number: formData.flightNumber,
-          departure_time: new Date(formData.departureTime).toISOString(),
-          arrival_time: new Date(formData.arrivalTime).toISOString(),
-          price: formData.price,
-          total_seats: formData.totalSeats,
-          available_seats: formData.totalSeats,
+          ...parsedPayload,
+          available_seats: Number(formData.totalSeats),
           class_type: 'economy',
           baggage_allowance: '23kg',
-          status: 'scheduled',
-          airline_name: formData.airlineName,
-          origin_airport_name: formData.originAirportName,
-          destination_airport_name: formData.destinationAirportName
+          status: 'scheduled'
         });
       }
+      
       setIsModalOpen(false);
       setEditingFlight(null);
-      loadFlights();
+      await loadFlights(); // Re-sync table matrix state
     } catch (err) {
       console.error(err);
       alert('Operational write pipeline exception occurred.');
     }
   };
 
+  // DYNAMIC REMOVAL MUTATION PIPE
+  const handleDeleteFlight = async (flightId: string, flightNumber: string) => {
+    const localizedConfirm = window.confirm(`Are you absolutely sure you want to decommission deployment: ${flightNumber}?`);
+    if (!localizedConfirm) return;
+
+    setActionLoadingId(flightId);
+    try {
+      await FlightService.deleteFlight(flightId);
+      // Fast optimistic client UI array splice before sync fallback
+      setFlights((prev) => prev.filter((item) => item.id !== flightId));
+    } catch (err) {
+      console.error('Removal pipeline exception thrown:', err);
+      alert('Failed to drop targeted flight allocation instance.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   const filteredFlights = flights.filter(f =>
-    f.flight_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.origin?.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.destination?.city.toLowerCase().includes(searchQuery.toLowerCase())
+    f.flight_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    f.origin?.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    f.destination?.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    f.airline?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -92,27 +117,34 @@ export default function AdminFlightsPage() {
         </Button>
       </div>
 
-      {/* সার্চ ফিল্টার */}
+      {/* SEARCH FILTER */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
         <input
           type="text"
-          placeholder="Filter by flight tag, origin, or landing destination..."
+          placeholder="Filter by flight tag, origin, carrier, or landing destination..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 text-white text-sm rounded-xl focus:outline-none focus:border-blue-500"
+          className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 text-white text-sm rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
         />
       </div>
 
-      {/* টেবিল লিস্ট */}
+      {/* DYNAMIC DATA GRID DISPLAY */}
       {loading ? (
-        <div className="h-48 bg-slate-900/40 rounded-2xl animate-pulse border border-white/5" />
+        <div className="h-48 bg-slate-900/40 rounded-2xl animate-pulse border border-white/5 flex items-center justify-center text-slate-500 text-sm">
+          Compiling live flight array matrices...
+        </div>
+      ) : filteredFlights.length === 0 ? (
+        <div className="h-48 bg-slate-900/20 border border-white/5 rounded-2xl flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+          <Plane className="h-8 w-8 text-slate-600 mb-2 stroke-[1.5]" />
+          <p className="text-sm font-medium">No matching active flight data metrics located.</p>
+        </div>
       ) : (
         <div className="bg-slate-900/20 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-300">
               <thead>
-                <tr className="border-b border-white/5 text-slate-400 font-medium bg-slate-900/40">
+                <tr className="border-b border-white/5 text-slate-400 font-medium bg-slate-900/40 select-none">
                   <th className="p-4">Flight / Carrier</th>
                   <th className="p-4">Route Blueprint</th>
                   <th className="p-4">Timing Windows</th>
@@ -121,68 +153,94 @@ export default function AdminFlightsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filteredFlights.map((flight) => (
-                  <tr key={flight.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-500/10 rounded-xl text-blue-400">
-                          <Plane className="h-4 w-4" />
+                {filteredFlights.map((flight) => {
+                  const isProcessing = actionLoadingId === flight.id;
+                  return (
+                    <tr key={flight.id} className="hover:bg-white/5 transition-colors group">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-500/10 border border-blue-500/10 group-hover:border-blue-500/20 rounded-xl text-blue-400 transition-colors">
+                            <Plane className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white font-mono tracking-tight">{flight.flight_number}</p>
+                            <p className="text-xs text-slate-500 font-medium">{flight.airline?.name || 'AeroSky Express'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-white font-mono">{flight.flight_number}</p>
-                          <p className="text-xs text-slate-500">{flight.airline?.name || 'AeroSky Express'}</p>
+                      </td>
+                      <td className="p-4">
+                        <p className="font-medium text-white">{flight.origin?.code || '???'} → {flight.destination?.code || '???'}</p>
+                        <p className="text-xs text-slate-500">{flight.origin?.city || 'Unknown'} to {flight.destination?.city || 'Unknown'}</p>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col gap-0.5 text-xs text-slate-300">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="h-3 w-3 text-slate-500" />
+                            <span>{new Date(flight.departure_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 pl-4">
+                            {new Date(flight.departure_time).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <p className="font-medium text-white">{flight.origin?.code} → {flight.destination?.code}</p>
-                      <p className="text-xs text-slate-500">{flight.origin?.city} to {flight.destination?.city}</p>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-1.5 text-slate-300 text-xs">
-                        <Calendar className="h-3 w-3 text-slate-500" />
-                        <span>{new Date(flight.departure_time).toLocaleDateString()}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <p className="font-medium text-white">{formatCurrency(flight.price)}</p>
-                      <p className="text-xs text-slate-500">{flight.available_seats}/{flight.total_seats} Seats Avail</p>
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingFlight(flight);
-                            setIsModalOpen(true);
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-blue-400 transition-colors"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-red-400 transition-colors">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-4">
+                        <p className="font-semibold text-emerald-400">{formatCurrency(flight.price)}</p>
+                        <p className="text-xs text-slate-500 font-medium">{flight.available_seats ?? flight.total_seats}/{flight.total_seats} Seats Left</p>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => {
+                              setEditingFlight(flight);
+                              setIsModalOpen(true);
+                            }}
+                            disabled={isProcessing}
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-blue-400 disabled:opacity-40 transition-colors"
+                            title="Edit Scheduling Matrix"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFlight(flight.id, flight.flight_number)}
+                            disabled={isProcessing}
+                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 disabled:opacity-40 transition-colors"
+                            title="Drop Flight Deployment"
+                          >
+                            {isProcessing ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-red-400" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* পপআপ মডাল ফর্ম */}
+      {/* POPUP MODAL FORM ENGINE */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.96, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="relative w-full max-w-2xl bg-slate-950 rounded-2xl border border-slate-800 p-2 shadow-2xl overflow-y-auto max-h-[90vh]"
             >
-              <div className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer" onClick={() => setIsModalOpen(false)}>✕</div>
+              <button 
+                type="button" 
+                className="absolute top-4 right-4 text-slate-400 hover:text-white rounded-md p-1 hover:bg-white/5 transition-colors z-10 font-sans" 
+                onClick={() => { setIsModalOpen(false); setEditingFlight(null); }}
+              >
+                ✕
+              </button>
 
               <AdminFlightForm
                 airports={airports}

@@ -36,6 +36,10 @@ export default function Navbar() {
 
   const navLinks = [
     {
+      href: '/',
+      label: 'Core Base'
+    },
+    {
       href: '/flights',
       label: 'Book Flights'
     },

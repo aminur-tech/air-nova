@@ -48,6 +48,27 @@ export const FlightService = {
     return data;
   },
 
+  // updateFlight and deleteFlight methods would be similar, using .update() and .delete() Supabase methods respectively
+  async updateFlight(flightId: string, updates: Partial<Flight>) {
+    const { data, error } = await supabase
+      .from('flights')
+      .update(updates)
+      .eq('id', flightId)
+      .select();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async deleteFlight(flightId: string) {
+    const { data, error } = await supabase
+      .from('flights')
+      .delete()
+      .eq('id', flightId)
+      .select();
+    if (error) throw new Error(error.message);
+    return data;
+  },  
+
   async getFlight() {
     const { data, error } = await supabase
       .from('flights')
@@ -55,6 +76,17 @@ export const FlightService = {
 
     if (error) throw new Error(error.message);
     return data as unknown as Flight[];
+  },
+
+  async getFlightById(flightId: string) {
+    const { data, error } = await supabase
+      .from('flights')
+      .select(`*`)
+      .eq('id', flightId)
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data as unknown as Flight;
   },
 
  async getAirports() {
