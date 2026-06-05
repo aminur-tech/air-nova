@@ -40,6 +40,7 @@ export default function PassengerDashboardPage() {
     const fetchItinerary = async () => {
       try {
         const data = await BookingService.getPassengerBookings();
+        // console.log('Fetched passenger bookings:', data);
         setBookings(data || []);
       } catch (err) {
         console.error('Failed to resolve itineraries:', err);
@@ -50,13 +51,13 @@ export default function PassengerDashboardPage() {
     fetchItinerary();
   }, []);
 
-  // HTML থেকে PDF ডাউনলোড করার ডায়নামিক ইঞ্জিন ফাংশন
+  // Dynamic engine function to download PDF from HTML
   const handlePdfGeneration = async (elementId: string, filename: string) => {
     setDownloadingId(elementId);
     const element = document.getElementById(elementId);
     if (!element) return;
 
-    // টেম্পোরারি প্রিন্ট ভিউ অপ্টিমাইজেশন (লুকানো ডম এলিমেন্টকে প্রিন্টের সময় ভিজিবল করা)
+    // Temporary print view optimization (making hidden DOM elements visible during print time)
     element.classList.remove('hidden');
     
     const html2pdf = (await import('html2pdf.js')).default;
@@ -141,10 +142,10 @@ export default function PassengerDashboardPage() {
                           <span>{new Date(booking.flight?.departure_time || new Date().toISOString()).toLocaleDateString()}</span>
                         </div>
                       </div>
-
+ 
                       <div className="flex items-center justify-between gap-4">
                         <div>
-                          <h2 className="text-2xl font-bold text-white">{booking.flight?.origin?.code || 'DAC'}</h2>
+                          <h2 className="text-2xl font-bold text-white">{booking.flight?.origin?.code }</h2>
                           <p className="text-xs text-slate-400 mt-0.5">{booking.flight?.origin?.city || 'Dhaka'}</p>
                         </div>
                         

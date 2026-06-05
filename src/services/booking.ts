@@ -11,10 +11,10 @@ export interface CreateBookingPayload {
 }
 
 export const BookingService = {
-  // প্রফেশনাল ব্যাগেজ চার্জ ক্যালকুলেটর
+  // Professional baggage charge calculator
   calculateExtraBaggage(weight: number): number {
     const FREE_LIMIT = 23;
-    const CHARGE_PER_KG = 15; // আপনার কারেন্সি অনুযায়ী রেট সেট করুন
+    const CHARGE_PER_KG = 15; // Set rate according to your currency
     if (weight <= FREE_LIMIT) return 0;
     return (weight - FREE_LIMIT) * CHARGE_PER_KG;
   },
@@ -26,7 +26,7 @@ export const BookingService = {
     const extraBaggageCharge = this.calculateExtraBaggage(payload.baggage_weight);
     const totalAmount = payload.ticket_price + extraBaggageCharge;
 
-    // সরাসরি ইনসার্টের বদলে সিকিউর RPC (Database Transaction) ব্যবহার
+    // Use secure RPC (Database Transaction) instead of direct insert
     const { data, error } = await supabase.rpc('execute_flight_booking', {
       p_flight_id: payload.flight_id,
       p_passenger_name: payload.passenger_name,
@@ -44,12 +44,22 @@ export const BookingService = {
   },
 
   async getPassengerBookings() {
-    const { data, error } = await supabase
-      .from('bookings')
-      .select(`*`);
-    if (error) throw error;
-    return data;
-  },
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      flights (
+        id,
+        flight_number,
+        departure_time,
+        price
+      )
+    `);
+
+  if (error) throw error;
+
+  return data;
+},
 
   async getBookedSeats(flightId: string) {
     const { data, error } = await supabase
