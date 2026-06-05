@@ -26,6 +26,7 @@ export default function FlightCard({ flight }: FlightCardProps) {
   // Determine availability status context
   const isSoldOut = flight.available_seats <= 0;
 
+  
   return (
     <Card className="p-6 hover:border-slate-800 bg-slate-950/40 backdrop-blur-sm transition-all duration-300">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">

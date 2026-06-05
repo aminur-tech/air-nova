@@ -47,13 +47,7 @@ export const BookingService = {
   const { data, error } = await supabase
     .from('bookings')
     .select(`
-      *,
-      flights (
-        id,
-        flight_number,
-        departure_time,
-        price
-      )
+      *
     `);
 
   if (error) throw error;

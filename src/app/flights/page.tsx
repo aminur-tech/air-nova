@@ -11,6 +11,7 @@ import { SlidersHorizontal } from 'lucide-react';
 function FlightsSearchContent() {
   const searchParams = useSearchParams();
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const origin = searchParams.get('origin') || '';
@@ -20,11 +21,13 @@ function FlightsSearchContent() {
   useEffect(() => {
     async function loadFilteredData() {
       setLoading(true);
+      setError(null);
       try {
         const data = await FlightService.searchFlights({ origin, destination, date });
         setFlights(data);
       } catch (err) {
         console.error("Flight engine aggregation failure: ", err);
+        setError(err instanceof Error ? err.message : "Failed to load flight data.");
       } finally {
         setLoading(false);
       }
@@ -72,6 +75,10 @@ function FlightsSearchContent() {
             Array.from({ length: 3 }).map((_, idx) => (
               <div key={idx} className="h-40 w-full bg-slate-900/40 border border-white/5 rounded-2xl animate-pulse" />
             ))
+          ) : error ? (
+            <div className="p-12 text-center bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm">
+              {error}. {error.includes('future') && "Please synchronize your system clock."}
+            </div>
           ) : flights.length === 0 ? (
             <div className="p-12 text-center bg-slate-900/20 border border-slate-900 border-dashed rounded-2xl text-slate-500 text-sm">
               No flight routes found corresponding to the exact parameters entered.
