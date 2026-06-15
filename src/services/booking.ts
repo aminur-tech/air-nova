@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
 
 export interface CreateBookingPayload {
   flight_id: string;
@@ -20,14 +20,18 @@ export const BookingService = {
   },
 
   async createBooking(payload: CreateBookingPayload) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error("Authentication required");
 
-    const extraBaggageCharge = this.calculateExtraBaggage(payload.baggage_weight);
+    const extraBaggageCharge = this.calculateExtraBaggage(
+      payload.baggage_weight,
+    );
     const totalAmount = payload.ticket_price + extraBaggageCharge;
 
     // Use secure RPC (Database Transaction) instead of direct insert
-    const { data, error } = await supabase.rpc('execute_flight_booking', {
+    const { data, error } = await supabase.rpc("execute_flight_booking", {
       p_flight_id: payload.flight_id,
       p_passenger_name: payload.passenger_name,
       p_passenger_passport: payload.passenger_passport,
@@ -36,32 +40,38 @@ export const BookingService = {
       p_extra_charge: extraBaggageCharge,
       p_ticket_price: payload.ticket_price,
       p_total_amount: totalAmount,
-      p_payment_intent_id: payload.payment_intent_id
+      p_payment_intent_id: payload.payment_intent_id,
     });
 
-    if (error) throw error;
+    const { error: updateError } = await supabase
+      .from("bookings")
+      .update({
+        payment_status: "succeeded",
+        booking_status: "confirmed",
+      })
+      .eq("payment_intent_id", payload.payment_intent_id);
+
+    if (updateError) throw updateError;
     return data;
   },
 
   async getPassengerBookings() {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select(`
+    const { data, error } = await supabase.from("bookings").select(`
       *
     `);
 
-  if (error) throw error;
+    if (error) throw error;
 
-  return data;
-},
+    return data;
+  },
 
   async getBookedSeats(flightId: string) {
     const { data, error } = await supabase
-      .from('bookings')
-      .select('seat_number')
-      .eq('flight_id', flightId);
-    
+      .from("bookings")
+      .select("seat_number")
+      .eq("flight_id", flightId);
+
     if (error) throw error;
-    return data?.map(booking => booking.seat_number) || [];
-  }
+    return data?.map((booking) => booking.seat_number) || [];
+  },
 };
